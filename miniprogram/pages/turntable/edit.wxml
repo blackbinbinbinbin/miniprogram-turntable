@@ -1,0 +1,65 @@
+<scroll-view class="edit-page" scroll-y="true">
+  <!-- 转盘标题 -->
+  <view class="section">
+    <view class="section-title">转盘标题</view>
+    <input 
+      class="title-input" 
+      value="{{title}}" 
+      bindinput="onTitleInput" 
+      placeholder="请输入转盘标题"
+    />
+  </view>
+
+  <!-- 转盘选项 -->
+  <view class="section">
+    <view class="section-title">转盘选项</view>
+    <view class="options-header">
+      <text class="header-text">颜色</text>
+      <text class="header-text">权重</text>
+    </view>
+    
+    <view class="sector-list">
+      <view class="sector-item" wx:for="{{sectors}}" wx:key="index">
+        <view class="delete-btn" bindtap="deleteSector" data-index="{{index}}">
+          <text class="delete-icon">－</text>
+        </view>
+        
+        <input 
+          class="sector-input" 
+          value="{{item.text}}" 
+          bindinput="onSectorTextInput" 
+          data-index="{{index}}"
+          placeholder="选项名称"
+        />
+        
+        <view class="color-indicator" style="background-color: {{item.color}};"></view>
+        
+        <input 
+          class="weight-input" 
+          type="number" 
+          value="{{item.weight}}" 
+          bindinput="onWeightInput" 
+          data-index="{{index}}"
+        />
+      </view>
+    </view>
+
+    <!-- 添加选项按钮 -->
+    <view class="add-buttons">
+      <view class="add-btn" bindtap="addSector">
+        <text class="add-icon">＋</text>
+        <text>添加新选项</text>
+      </view>
+      
+      <view class="add-btn batch-add" bindtap="batchAddSectors">
+        <text class="add-icon">＋</text>
+        <text>批量添加选项</text>
+      </view>
+    </view>
+  </view>
+</scroll-view>
+
+<!-- 保存按钮 -->
+<view class="save-section">
+  <button class="save-btn" bindtap="saveConfig">保存 (共{{sectors.length}}项)</button>
+</view> 
