@@ -11,8 +11,26 @@
 .title {
   font-size: 48rpx;
   font-weight: bold;
-  margin-bottom: 80rpx;
+  margin-bottom: 40rpx;
   color: #333;
+}
+
+/* 当前选项显示 */
+.current-option {
+  margin-bottom: 40rpx;
+  padding: 20rpx 40rpx;
+  background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+  border-radius: 50rpx;
+  box-shadow: 0 6rpx 20rpx rgba(255, 107, 107, 0.3);
+  min-width: 200rpx;
+  text-align: center;
+}
+
+.option-text {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.3);
 }
 
 .edit-btn {
@@ -46,11 +64,9 @@
 
 .turntable-container {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 350px;
   height: 350px;
+  margin: 40rpx auto;
 }
 
 .turntable-canvas {
@@ -61,16 +77,64 @@
   width: 350px;
   height: 350px;
   position: relative;
+  z-index: 1; /* 确保canvas层级较低 */
 }
 
+/* 转盘指针按钮 - 现在不会被遮挡 */
+.go-btn-simple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 80px; 
+  height: 80px;
+  margin-left: -40px;
+  margin-top: -40px;
+  background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+  z-index: 100;
+}
+
+.go-btn-simple:active {
+  transform: scale(0.95);
+}
+
+/* Canvas隐藏时的样式 */
+.turntable-canvas.hidden {
+  display: none;
+}
+
+/* 转盘图片样式 */
+.turntable-image {
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.1);
+}
+
+
+
+/* 原来的样式保留作为备用 */
 .go-btn {
   position: absolute;
+  top: 50%;
+  left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 100;
+  z-index: 999;
   transition: all 0.3s ease;
   display: block;
-  top: 100%;
-  left: 50%;
+  pointer-events: auto;
+  width: 80rpx;
+  height: 80rpx;
+  background: rgba(255, 0, 0, 0.3);
 }
 
 .go-btn:active {

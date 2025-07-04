@@ -1,26 +1,41 @@
 <view class="turntable-page">
   <view class="title">{{title}}</view>
+  
+  <!-- 当前指向的选项显示 -->
+  <view class="current-option">
+    <text class="option-text">{{currentOption}}</text>
+  </view>
+  
   <view class="turntable-container">
+    <!-- Canvas用于绘制，但可能隐藏 -->
     <canvas
       canvas-id="turntable"
-      class="turntable-canvas"
+      class="turntable-canvas {{canvasVisible ? '' : 'hidden'}}"
       style="width: 350px; height: 350px;"
       width="350"
       height="350"
     ></canvas>
+    
+    <!-- 显示Canvas转换的图片 -->
     <image 
-      class="go-btn" 
-      src="../../images/point.svg" 
-      mode="aspectFit" 
-      bindtap="startRotate"
-      style="left: {{buttonStyle.left}}; top: {{buttonStyle.top}}; width: {{buttonStyle.width}}; height: {{buttonStyle.height}};"
+      wx:if="{{turntableImage}}"
+      class="turntable-image"
+      src="{{turntableImage}}"
+      mode="aspectFit"
     ></image>
+    
+    <!-- 转盘指针按钮 - 现在可以正常显示 -->
+    <view class="go-btn-simple" bindtap="startRotate">
+      <text>GO</text>
+    </view>
     
     <!-- 当转盘完成时，显示提示文字 -->
     <view wx:if="{{finished}}" class="restart-hint">
-      <text>点击指针再次转动</text>
+      <text>点击GO再次转动</text>
     </view>
   </view>
+  
+
   
   <!-- 编辑按钮放在转盘下方 -->
   <view class="edit-btn" bindtap="goToEdit">

@@ -11,14 +11,22 @@ Page({
     sectors,
     rotating: false,
     title: '开心转转转',
-    buttonStyle: {}, // 动态按钮样式
     finished: false, // 是否已完成转动
-    selectedIndex: -1 // 当前选中的扇区索引
+    selectedIndex: -1, // 当前选中的扇区索引
+    canvasVisible: true, // Canvas是否可见
+    turntableImage: '', // 转盘图片路径
+    currentOption: '开始转动' // 当前指向的选项
   },
   canvasInfo: null, // 缓存 canvas 信息
   onShow() {
     // 页面显示时加载配置
     this.loadTurntableConfig();
+    // 初始化显示第一个选项
+    if (sectors.length > 0) {
+      this.setData({
+        currentOption: sectors[0].text
+      });
+    }
   },
 
   onReady() {
@@ -83,20 +91,9 @@ Page({
 
   // 动态更新按钮位置
   updateButtonPosition(containerRect) {
-    // 计算转盘容器的中心点
-    const centerX = containerRect.width / 2;
-    const centerY = containerRect.height / 2;
-    
-    // 动态设置按钮样式
-    const btnSize = Math.min(containerRect.width, containerRect.height) * 0.2; // 按钮大小为容器的20%
-    
+    // 容错处理：使用CSS固定样式，无需动态计算
     this.setData({
-      buttonStyle: {
-        left: centerX + 'px',
-        top: centerY + 'px',
-        width: btnSize + 'px',
-        height: btnSize + 'px'
-      }
+      buttonStyle: {}  // 清空动态样式，使用CSS固定样式
     });
   },
   drawTurntable(rotateAngle = 0, highlightIndex = -1) {
@@ -173,23 +170,79 @@ Page({
     ctx.setLineWidth(1);
     ctx.stroke();
     
-    ctx.draw();
+    // 如果不在转动状态，绘制完成后转换为图片
+    if (this.data.rotating) {
+      ctx.draw();
+    } else {
+      ctx.draw(false, () => {
+        // 绘制完成后，将Canvas转换为图片
+        this.convertCanvasToImage();
+      });
+    }
   },
+  
+  // 将Canvas转换为图片
+  convertCanvasToImage() {
+    wx.canvasToTempFilePath({
+      canvasId: 'turntable',
+      success: (res) => {
+        this.setData({
+          turntableImage: res.tempFilePath,
+          canvasVisible: false // 隐藏Canvas，显示图片
+        });
+      },
+      fail: (err) => {
+        console.error('Canvas转图片失败:', err);
+        // 如果转换失败，保持显示Canvas
+        this.setData({
+          canvasVisible: true,
+          turntableImage: ''
+        });
+      }
+    }, this);
+  },
+  
+  // 计算当前12点钟方向指向的扇区
+  getCurrentPointingSector(currentAngle) {
+    const len = sectors.length;
+    const anglePerSector = 360 / len;
+    
+    // 将角度标准化到0-360度
+    let normalizedAngle = ((currentAngle % 360) + 360) % 360;
+    
+    // 12点钟方向在Canvas中是-90度（或270度）
+    // 计算相对于12点钟方向的角度偏移
+    let offsetAngle = (normalizedAngle + 90) % 360;
+    
+    // 计算当前指向的扇区索引
+    let sectorIndex = Math.floor(offsetAngle / anglePerSector);
+    
+    // 确保索引在有效范围内
+    sectorIndex = (sectorIndex + len) % len;
+    
+    return sectorIndex;
+  },
+  
   startRotate() {
     if (this.data.rotating) return;
     
-    // 如果已完成，清除蒙版并直接开始新的转动
+    // 转动时显示Canvas，隐藏图片（因为需要动画）
+    this.setData({ 
+      canvasVisible: true,
+      turntableImage: '',
+      rotating: true, // 先设置rotating状态
+      currentOption: '转动中...' // 显示转动状态
+    });
+    
+    // 如果已完成，清除蒙版状态
     if (this.data.finished) {
       this.setData({ 
         finished: false,
         selectedIndex: -1
       });
-      this.drawTurntable(0);
     }
     
-    this.setData({ rotating: true });
-    
-    // 开始转动时重新绘制
+    // 开始转动时重新绘制（不转换为图片）
     this.drawTurntable(0);
     
     // 根据权重随机选择扇区
@@ -234,6 +287,12 @@ Page({
       if (angleDiff > 0.5 || progress >= 1) {
         this.drawTurntable(currentAngle * Math.PI / 180);
         this.lastAngle = currentAngle;
+        
+        // 实时更新当前指向的选项
+        const pointingSector = this.getCurrentPointingSector(currentAngle);
+        this.setData({
+          currentOption: sectors[pointingSector].text
+        });
       }
       
       if (progress < 1) {
@@ -242,26 +301,25 @@ Page({
       } else {
         // 确保最终角度精确
         this.drawTurntable(finalAngle * Math.PI / 180);
-        this.setData({ rotating: false });
         this.lastAngle = 0; // 重置
         
         // 稍微延迟显示蒙版效果和结果
         setTimeout(() => {
-          // 绘制带高亮效果的转盘
-          this.drawTurntable(finalAngle * Math.PI / 180, target);
-          
-          // 设置完成状态
+          // 先设置rotating为false，这样drawTurntable会转换为图片
           this.setData({ 
+            rotating: false,
             finished: true,
             selectedIndex: target
           });
           
-          wx.showToast({ 
-            title: `结果：${sectors[target].text}`, 
-            icon: 'none',
-            duration: 2000
+          // 绘制带高亮效果的转盘，并转换为图片
+          this.drawTurntable(finalAngle * Math.PI / 180, target);
+          
+          // 更新最终结果显示
+          this.setData({
+            currentOption: sectors[target].text
           });
-        }, 100);
+        }, 30);
       }
     };
     
