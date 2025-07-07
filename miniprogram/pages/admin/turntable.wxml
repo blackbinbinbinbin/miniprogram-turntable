@@ -1,0 +1,49 @@
+<!-- 转盘管理页面 -->
+<view class="container">
+  <!-- 头部搜索区域 -->
+  <view class="search-section">
+    <view class="search-box">
+      <input 
+        class="search-input" 
+        placeholder="转盘名称" 
+        data-field="turntableText"
+        bindinput="onInput"
+        value="{{turntableText}}"
+      />
+      <input 
+        class="search-input" 
+        placeholder="用户名" 
+        data-field="turntableUserName"
+        bindinput="onInput"
+        value="{{turntableUserName}}"
+      />
+      <view class="search-btn" bindtap="search">搜索</view>
+    </view>
+  </view>
+
+  <!-- 转盘列表 -->
+  <view class="turntable-list">
+    <view class="list-header">
+      <text class="header-item">转盘名称</text>
+      <text class="header-item">创建者</text>
+      <text class="header-item">操作</text>
+    </view>
+    
+    <view class="list-content">
+      <block wx:for="{{turntableList}}" wx:key="id">
+        <view class="list-item">
+          <text class="item-name">{{item.name || '未命名转盘'}}</text>
+          <text class="item-creator">{{item.creator || '未知用户'}}</text>
+          <view class="item-actions">
+            <view class="action-btn edit" bindtap="handleEdit" data-id="{{item.id}}">编辑概率</view>
+          </view>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <!-- 无数据提示 -->
+  <view class="empty-tip" wx:if="{{!turntableList.length}}">
+    <text>暂无转盘数据</text>
+  </view>
+</view> 

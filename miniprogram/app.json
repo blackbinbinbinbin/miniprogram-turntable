@@ -1,15 +1,17 @@
 {
   "pages": [
-    "pages/turntable/index",
-    "pages/turntable/edit",
     "pages/index/index",
-    "pages/example/index"
+    "pages/index/edit",
+    "pages/admin/index",
+    "pages/admin/turntable",
+    "pages/admin/editWeight",
+    "pages/admin/user"
   ],
   "window": {
     "backgroundColor": "#F6F6F6",
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#F6F6F6",
-    "navigationBarTitleText": "云开发 QuickStart",
+    "navigationBarTitleText": "幸运转盘",
     "navigationBarTextStyle": "black"
   },
   "sitemapLocation": "sitemap.json",

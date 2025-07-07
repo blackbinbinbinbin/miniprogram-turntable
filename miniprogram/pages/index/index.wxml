@@ -1,29 +1,44 @@
-<!--index.wxml-->
-<view class="container">
-  <view class="title">快速了解云开发</view>
-  <view class="top_tip">免鉴权接口调用 免部署后台 高并发</view>
-  <view class="power" wx:key="title" wx:for="{{powerList}}" wx:for-item="power">
-    <view class="power_info" data-index="{{index}}" data-type="{{ power.type }}" bindtap="onClickPowerInfo">
-      <view class="power_info_text">
-        <view class="power_info_text_title">
-          {{power.title}}
-          <view class="power_info_text_tag" wx:if="{{power.tag}}">{{power.tag}}</view>
-        </view>
-        <view class="power_info_text_tip">{{power.tip}}</view>
-      </view>
-      <image wx:if="{{!power.showItem && power.item.length}}" class="power_info_more" src="../../images/arrow.svg"></image>
-      <image wx:if="{{power.showItem && power.item.length}}" class="power_info_less" src="../../images/arrow.svg"></image>
-      <image wx:if="{{!power.item.length}}" class="power_item_icon" src="../../images/arrow.svg"></image>
+<view class="turntable-page">
+  <view class="title">{{title}}</view>
+  
+  <!-- 当前指向的选项显示 -->
+  <view class="current-option">
+    <text class="option-text">{{currentOption}}</text>
+  </view>
+  
+  <view class="turntable-container">
+    <!-- Canvas用于绘制，但可能隐藏 -->
+    <canvas
+      canvas-id="turntable"
+      class="turntable-canvas {{canvasVisible ? '' : 'hidden'}}"
+      style="width: 350px; height: 350px;"
+      width="350"
+      height="350"
+    ></canvas>
+    
+    <!-- 显示Canvas转换的图片 -->
+    <image 
+      wx:if="{{turntableImage}}"
+      class="turntable-image"
+      src="{{turntableImage}}"
+      mode="aspectFit"
+    ></image>
+    
+    <!-- 转盘指针按钮 - 现在可以正常显示 -->
+    <view class="go-btn-simple" bindtap="startRotate">
+      <text>GO</text>
     </view>
-    <view wx:if="{{power.showItem}}">
-      <view wx:key="title" wx:for="{{power.item}}">
-        <view class="line"></view>
-        <view class="power_item" bindtap="jumpPage" data-type="{{ item.type }}" data-page="{{item.page}}">
-          <view class="power_item_title">{{item.title}}</view>
-          <image class="power_item_icon" src="../../images/arrow.svg"></image>
-        </view>
-      </view>
+    
+    <!-- 当转盘完成时，显示提示文字 -->
+    <view wx:if="{{finished}}" class="restart-hint">
+      <text>点击GO再次转动</text>
     </view>
   </view>
-  <cloud-tip-modal showTipProps="{{showTip}}" title="{{title}}" content="{{content}}"></cloud-tip-modal>
-</view>
+  
+
+  
+  <!-- 编辑按钮放在转盘下方 -->
+  <view class="edit-btn" bindtap="goToEdit">
+    <text class="edit-text">编辑</text>
+  </view>
+</view> 

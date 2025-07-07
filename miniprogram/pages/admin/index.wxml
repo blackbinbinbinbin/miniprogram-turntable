@@ -1,0 +1,32 @@
+<!--miniprogram/pages/admin/index.wxml-->
+<view class="container">
+  <!-- 头部标题 -->
+  <view class="header">
+    <text class="header-title">管理后台</text>
+  </view>
+
+  <!-- 统计数据区域 -->
+  <view class="stats-section">
+    <view class="stat-item">
+      <view class="stat-number">{{totalUsers}}</view>
+      <view class="stat-label">总用户数</view>
+    </view>
+  </view>
+
+  <!-- 功能菜单区域 -->
+  <view class="menu-section">
+    <view class="section-title">功能菜单</view>
+    <view class="menu-list">
+      <view class="menu-item" bindtap="handleTurntableManage">
+        <image class="menu-icon" src="/images/icons/goods.png" mode="aspectFit"></image>
+        <text class="menu-text">转盘管理</text>
+        <image class="menu-arrow" src="/images/icons/arrow.png" mode="aspectFit"></image>
+      </view>
+      <view class="menu-item" bindtap="handleUserManage">
+        <image class="menu-icon" src="/images/icons/usercenter.png" mode="aspectFit"></image>
+        <text class="menu-text">用户管理</text>
+        <image class="menu-arrow" src="/images/icons/arrow.png" mode="aspectFit"></image>
+      </view>
+    </view>
+  </view>
+</view> 

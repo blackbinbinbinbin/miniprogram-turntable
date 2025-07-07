@@ -61,5 +61,15 @@
 
 <!-- 保存按钮 -->
 <view class="save-section">
-  <button class="save-btn" bindtap="saveConfig">保存 (共{{sectors.length}}项)</button>
+  <button class="save-btn" bindtap="saveConfig" disabled="{{loading}}">
+    保存 (共{{sectors.length}}项)
+  </button>
+</view>
+
+<!-- 全屏loading遮罩 -->
+<view wx:if="{{loading}}" class="loading-mask">
+  <view class="loading-content">
+    <image class="loading-icon" src="../../images/icons/loading.svg" />
+    <text class="loading-text">保存中...</text>
+  </view>
 </view> 

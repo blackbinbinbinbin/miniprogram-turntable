@@ -151,4 +151,58 @@
   padding: 28rpx;
   font-size: 32rpx;
   font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.save-btn[disabled] {
+  opacity: 0.7;
+  background: linear-gradient(135deg, #999 0%, #777 100%);
+}
+
+/* 全屏loading遮罩 */
+.loading-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-content {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20rpx;
+  padding: 60rpx 80rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30rpx;
+  box-shadow: 0 10rpx 40rpx rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10rpx);
+}
+
+.loading-icon {
+  width: 60rpx;
+  height: 60rpx;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  font-size: 32rpx;
+  color: #333;
+  font-weight: bold;
+}
+
+/* 旋转动画 */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 } 

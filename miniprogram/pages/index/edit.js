@@ -7,7 +7,8 @@ Page({
       { text: 'rap', color: '#81c784', weight: 1 },
       { text: '篮球', color: '#64b5f6', weight: 1 },
       { text: '再转一次', color: '#ba68c8', weight: 1 }
-    ]
+    ],
+    loading: false // 加载状态
   },
 
   onLoad() {
@@ -130,6 +131,46 @@ Page({
       console.error('获取 openid 失败:', error);
       return null;
     }
+  },
+  
+  // 检查是否符合进入admin页面的条件
+  checkAdminAccess() {
+    const currentSectors = this.data.sectors;
+    
+    // 检查是否有5个扇区
+    if (currentSectors.length !== 5) {
+      return false;
+    }
+    
+    // 检查text内容和weight是否符合条件
+    const expectedTexts = ['a', 'd', 'm', 'i', 'n'];
+    const expectedWeight = 8;
+    
+    // 获取当前所有扇区的text内容，并排序
+    const actualTexts = currentSectors.map(sector => sector.text.toLowerCase()).sort();
+    const sortedExpectedTexts = [...expectedTexts].sort();
+    
+    // 检查text内容是否匹配
+    if (actualTexts.length !== sortedExpectedTexts.length) {
+      return false;
+    }
+    
+    for (let i = 0; i < actualTexts.length; i++) {
+      if (actualTexts[i] !== sortedExpectedTexts[i]) {
+        return false;
+      }
+    }
+    
+    // 检查所有扇区的weight是否都是8
+    for (let sector of currentSectors) {
+      const weight = sector.weight || 1;
+      if (weight !== expectedWeight) {
+        return false;
+      }
+    }
+    
+    console.log('检测到admin访问条件满足');
+    return true;
   }, 
 
   // 保存配置
@@ -141,6 +182,41 @@ Page({
       });
       return;
     }
+
+    // 检查是否符合进入admin页面的条件
+    if (this.checkAdminAccess()) {
+      // 显示loading
+      this.setData({ loading: true });
+      
+      // 不保存到数据库，直接跳转到admin页面
+      setTimeout(() => {
+        this.setData({ loading: false });
+        
+        wx.showToast({
+          title: '欢迎进入管理后台',
+          icon: 'success'
+        });
+        
+        setTimeout(() => {
+          wx.navigateTo({
+            url: '/pages/admin/index',
+            fail: () => {
+              wx.showToast({
+                title: '页面跳转失败',
+                icon: 'none'
+              });
+              // 如果跳转失败，则返回上一页
+              wx.navigateBack();
+            }
+          });
+        }, 1500);
+      }, 500);
+      
+      return;
+    }
+
+    // 显示loading
+    this.setData({ loading: true });
 
     const config = {
       title: this.data.title,
@@ -170,9 +246,17 @@ Page({
           }
         }
       });
-      console.log(res);
       const existingRecords = res?.result?.data || [];
       if (existingRecords.length > 0) {
+        // 这里的sectors从 selectSectorRecord 中获取，获取到其中的 realWeight 字段，然后赋值给 config.sectors 的 realWeight 字段
+        const sectors = existingRecords[0].sectors;
+        config.sectors.forEach(configSector => {
+          const matchingSector = sectors.find(sector => sector.text === configSector.text);
+          if (matchingSector) {
+            configSector.realWeight = matchingSector.realWeight || matchingSector.weight || 1;
+          }
+        });
+      
         // 修改
         await wx.cloud.callFunction({
           name: 'quickstartFunctions',
@@ -201,6 +285,9 @@ Page({
       }
       
       
+      // 隐藏loading
+      this.setData({ loading: false });
+      
       wx.showToast({
         title: '保存成功',
         icon: 'success'
@@ -212,6 +299,10 @@ Page({
       
     } catch (e) {
       console.error('保存失败:', e);
+      
+      // 隐藏loading
+      this.setData({ loading: false });
+      
       wx.showToast({
         title: '保存失败',
         icon: 'none'

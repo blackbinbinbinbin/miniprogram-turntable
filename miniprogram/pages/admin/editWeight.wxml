@@ -1,0 +1,46 @@
+<!-- 编辑概率页面 -->
+<scroll-view class="edit-page" scroll-y="true">
+  <!-- 转盘标题 -->
+  <view class="section">
+    <view class="section-title">{{turntableName}}</view>
+  </view>
+
+  <!-- 转盘选项 -->
+  <view class="section">
+    <view class="section-title">转盘选项</view>
+    <view class="options-header">
+      <text class="header-text">选项</text>
+      <text class="header-text">概率权重</text>
+    </view>
+    
+    <view class="sector-list">
+      <view class="sector-item" wx:for="{{sectors}}" wx:key="index">
+        <text class="sector-name">{{item.name}}</text>
+        <input 
+          class="weight-input" 
+          type="number" 
+          value="{{item.realweight}}" 
+          bindinput="onWeightInput" 
+          data-index="{{index}}"
+        />
+      </view>
+    </view>
+
+    <view class="tips">
+      <text>提示：权重值越大，抽中概率越高</text>
+    </view>
+  </view>
+</scroll-view>
+
+<!-- 保存按钮 -->
+<view class="save-section">
+  <view class="save-btn {{loading ? 'disabled' : ''}}" bindtap="handleSave">保存</view>
+</view>
+
+<!-- 全屏loading遮罩 -->
+<view wx:if="{{loading}}" class="loading-mask">
+  <view class="loading-content">
+    <image class="loading-icon" src="../../images/icons/loading.svg" />
+    <text class="loading-text">保存中...</text>
+  </view>
+</view> 
