@@ -1,3 +1,5 @@
+const StorageUtil = require('../../utils/storage');
+
 const sectors = [
   { text: '唱', color: '#f88', weight: 1 , realWeight: 1},
   { text: '跳', color: '#99884d', weight: 1 , realWeight: 1},
@@ -8,7 +10,13 @@ const sectors = [
 
 Page({
   data: {
-    sectors,
+    sectors: [
+      { text: '唱', color: '#f88', weight: 1 , realWeight: 1},
+      { text: '跳', color: '#99884d', weight: 1 , realWeight: 1},
+      { text: 'rap', color: '#4d9988', weight: 1 , realWeight: 1},
+      { text: '篮球', color: '#6c4d99', weight: 1 , realWeight: 1},
+      { text: '再试一次', color: '#4d9999', weight: 1 , realWeight: 1}
+    ],
     rotating: false,
     title: '开心转转转',
     finished: false, // 是否已完成转动
@@ -20,12 +28,23 @@ Page({
   canvasInfo: null, // 缓存 canvas 信息
   lastPointingSector: -1, // 缓存上次指向的扇区，减少重复更新
   updateTimer: null, // 定时器ID
+  isInitializingCanvas: false, // Canvas初始化锁，防止并发初始化
 
   onShow() {
     // 页面显示时加载配置
     this.loadTurntableConfig();
     // 启动定时器
     this.startUpdateTimer();
+    
+    // 如果Canvas还没有初始化，尝试初始化（备用方案）
+    if (!this.canvasInfo) {
+      setTimeout(() => {
+        if (!this.canvasInfo) {
+          console.log('onShow中尝试初始化Canvas');
+          this.initCanvas();
+        }
+      }, 800);
+    }
   },
 
   onHide() {
@@ -75,39 +94,44 @@ Page({
       if (result.result && result.result.data && result.result.data.length > 0) {
         const cloudConfig = result.result.data[0];
         
-        // 根据text匹配更新realWeight
-        const updatedSectors = this.data.sectors.map(sector => {
-          // 在云端数据中找到对应text的扇区
-          const matchedSector = cloudConfig.sectors.find(
-            cloudSector => cloudSector.text === sector.text
-          );
-          
-          if (matchedSector && matchedSector.realWeight !== undefined) {
-            // 只更新realWeight，保持其他属性不变
-            return {
-              ...sector,
-              realWeight: matchedSector.realWeight
-            };
+        // 确保云端配置有效且当前页面有sectors数据
+        if (cloudConfig.sectors && cloudConfig.sectors.length > 0 && this.data.sectors && this.data.sectors.length > 0) {
+          // 根据text匹配更新realWeight
+          const updatedSectors = this.data.sectors.map(sector => {
+            // 在云端数据中找到对应text的扇区
+            const matchedSector = cloudConfig.sectors.find(
+              cloudSector => cloudSector.text === sector.text
+            );
+            
+            if (matchedSector && matchedSector.realWeight !== undefined) {
+              // 只更新realWeight，保持其他属性不变
+              return {
+                ...sector,
+                realWeight: matchedSector.realWeight
+              };
+            }
+            return sector;
+          });
+
+          // 只有在有有效更新数据时才更新全局sectors变量
+          if (updatedSectors.length > 0) {
+            sectors.length = 0;
+            sectors.push(...updatedSectors);
+            
+            // 更新页面数据
+            this.setData({
+              sectors: updatedSectors
+            });
+
+                  // 同时更新本地存储（1天过期）
+      const localConfig = StorageUtil.getWithExpiry('turntableConfig') || {};
+      StorageUtil.setWithExpiry('turntableConfig', {
+        ...localConfig,
+        sectors: updatedSectors,
+        title: this.data.title // 保持原有标题
+      }, 1);
           }
-          return sector;
-        });
-
-        // 更新全局sectors变量
-        sectors.length = 0;
-        sectors.push(...updatedSectors);
-        
-        // 更新页面数据
-        this.setData({
-          sectors: updatedSectors
-        });
-
-        // 同时更新本地存储
-        const localConfig = wx.getStorageSync('turntableConfig') || {};
-        wx.setStorageSync('turntableConfig', {
-          ...localConfig,
-          sectors: updatedSectors,
-          title: this.data.title // 保持原有标题
-        });
+        }
       }
     } catch (error) {
       console.error('更新权重数据失败:', error);
@@ -115,10 +139,11 @@ Page({
   },
 
   onReady() {
-    // 延迟绘制，确保页面完全加载
+    console.log('onReady 被调用，当前sectors数量:', this.data.sectors ? this.data.sectors.length : 0);
+    // 增加延迟时间，确保页面完全加载和渲染，避免时序问题
     setTimeout(() => {
       this.initCanvas();
-    }, 100);
+    }, 500);
   },
 
   // 加载转盘配置
@@ -142,41 +167,51 @@ Page({
       return;
     }
 
-    const cloudResult = await wx.cloud.callFunction({
-      name: 'quickstartFunctions',
-      data: { 
-        type: 'selectSectorRecord',
-        data: {
-          _openid: openid
+    try {
+      const cloudResult = await wx.cloud.callFunction({
+        name: 'quickstartFunctions',
+        data: { 
+          type: 'selectSectorRecord',
+          data: {
+            _openid: openid
+          }
         }
+      });
+
+      console.log('云端配置查询结果:', cloudResult);
+
+      if (cloudResult.result && cloudResult.result.data && cloudResult.result.data.length > 0) {
+        // 使用云端配置
+        const cloudConfig = cloudResult.result.data[0];
+        console.log('使用云端配置:', cloudConfig);
+        
+        // 确保云端配置有效后再更新全局 sectors 变量
+        if (cloudConfig.sectors && cloudConfig.sectors.length > 0) {
+          sectors.length = 0;
+          sectors.push(...cloudConfig.sectors);
+          
+          this.setData({
+            sectors: cloudConfig.sectors,
+            title: cloudConfig.title || '开心转转转'
+          });
+
+                // 同时更新本地存储，作为备份（1天过期）
+      StorageUtil.setWithExpiry('turntableConfig', {
+        sectors: cloudConfig.sectors,
+        title: cloudConfig.title || '开心转转转'
+      }, 1);
+
+          this.refreshTurntable(cloudConfig.sectors);
+        } else {
+          console.log('云端配置无效，使用本地配置');
+          this.loadLocalConfig();
+        }
+      } else {
+        console.log('云端无配置数据，使用本地配置');
+        this.loadLocalConfig();
       }
-    });
-
-    console.log('云端配置查询结果:', cloudResult);
-
-    if (cloudResult.result && cloudResult.result.data && cloudResult.result.data.length > 0) {
-      // 使用云端配置
-      const cloudConfig = cloudResult.result.data[0];
-      console.log('使用云端配置:', cloudConfig);
-      
-      // 更新全局 sectors 变量
-      sectors.length = 0;
-      sectors.push(...cloudConfig.sectors);
-      
-      this.setData({
-        sectors: cloudConfig.sectors,
-        title: cloudConfig.title || '开心转转转'
-      });
-
-      // 同时更新本地存储，作为备份
-      wx.setStorageSync('turntableConfig', {
-        sectors: cloudConfig.sectors,
-        title: cloudConfig.title || '开心转转转'
-      });
-
-      this.refreshTurntable(cloudConfig.sectors);
-    } else {
-      console.log('云端无配置数据，使用本地配置');
+    } catch (error) {
+      console.log('云端配置加载异常，使用本地配置:', error);
       this.loadLocalConfig();
     }
   },
@@ -184,7 +219,7 @@ Page({
   // 从本地加载配置
   loadLocalConfig() {
     try {
-      const config = wx.getStorageSync('turntableConfig');
+      const config = StorageUtil.getWithExpiry('turntableConfig');
       if (config && config.sectors && config.sectors.length > 0) {
         console.log('使用本地配置:', config);
         
@@ -200,21 +235,37 @@ Page({
         this.refreshTurntable(config.sectors);
       } else {
         console.log('本地无配置，使用默认配置');
-        // 使用默认配置
+        // 使用默认配置 - 确保不修改全局sectors，直接使用初始值
+        const defaultSectors = [
+          { text: '唱', color: '#f88', weight: 1 , realWeight: 1},
+          { text: '跳', color: '#99884d', weight: 1 , realWeight: 1},
+          { text: 'rap', color: '#4d9988', weight: 1 , realWeight: 1},
+          { text: '篮球', color: '#6c4d99', weight: 1 , realWeight: 1},
+          { text: '再试一次', color: '#4d9999', weight: 1 , realWeight: 1}
+        ];
+        
         this.setData({
-          sectors: sectors, // 使用文件顶部定义的默认sectors
+          sectors: defaultSectors,
           title: '开心转转转'
         });
-        this.refreshTurntable(sectors);
+        this.refreshTurntable(defaultSectors);
       }
     } catch (e) {
       console.log('读取本地配置失败，使用默认配置', e);
-      // 使用默认配置
+      // 使用默认配置 - 确保不修改全局sectors，直接使用初始值
+      const defaultSectors = [
+        { text: '唱', color: '#f88', weight: 1 , realWeight: 1},
+        { text: '跳', color: '#99884d', weight: 1 , realWeight: 1},
+        { text: 'rap', color: '#4d9988', weight: 1 , realWeight: 1},
+        { text: '篮球', color: '#6c4d99', weight: 1 , realWeight: 1},
+        { text: '再试一次', color: '#4d9999', weight: 1 , realWeight: 1}
+      ];
+      
       this.setData({
-        sectors: sectors,
+        sectors: defaultSectors,
         title: '开心转转转'
       });
-      this.refreshTurntable(sectors);
+      this.refreshTurntable(defaultSectors);
     }
   },
 
@@ -229,12 +280,17 @@ Page({
         rotating: false,
         finished: false
       });
-      this.drawTurntable(0);
+      
+      // 稍微延迟一下再绘制，确保状态更新完成
+      setTimeout(() => {
+        this.drawTurntable(0);
+      }, 30);
     } else {
       // 如果canvasInfo丢失，重新初始化
+      console.log('refreshTurntable中Canvas未初始化，重新初始化');
       setTimeout(() => {
         this.initCanvas();
-      }, 50);
+      }, 100);
     }
     
     // 更新当前选项显示
@@ -253,26 +309,89 @@ Page({
   },
   
   // 初始化 canvas，只执行一次
-  initCanvas() {
-    const query = wx.createSelectorQuery().in(this);
+  initCanvas(retryCount = 0) {
+    // 防止并发初始化
+    if (this.isInitializingCanvas) {
+      console.log('Canvas正在初始化中，跳过重复调用');
+      return;
+    }
+    
+    // 如果已经初始化成功，跳过
+    if (this.canvasInfo && retryCount === 0) {
+      console.log('Canvas已经初始化成功，跳过重复调用');
+      return;
+    }
+    
+    this.isInitializingCanvas = true;
+    console.log(`Canvas初始化尝试 ${retryCount + 1}/3`);
+
+    
+    
+    const query = wx.createSelectorQuery();
     query.select('.turntable-canvas').boundingClientRect();
     query.select('.turntable-container').boundingClientRect();
     query.exec((res) => {
-      if (res[0] && res[1]) {
+      console.log('Canvas查询结果:', res);
+      
+      if (res[0] && res[1] && res[0].width > 0 && res[0].height > 0) {
+        // 确保radius始终为正数，最小值为10
+        const minSize = Math.min(res[0].width, res[0].height);
+        const calculatedRadius = minSize / 2 - 20;
+        const safeRadius = Math.max(calculatedRadius, 10); // 最小半径为10像素
+        
         this.canvasInfo = {
           width: res[0].width,
           height: res[0].height,
           centerX: res[0].width / 2,
           centerY: res[0].height / 2,
-          radius: Math.min(res[0].width, res[0].height) / 2 - 20
+          radius: safeRadius
         };
+        
+        console.log('Canvas初始化成功:', this.canvasInfo);
+        
+        // 释放初始化锁
+        this.isInitializingCanvas = false;
         
         // 动态计算按钮位置，确保在所有机型上都居中
         this.updateButtonPosition(res[1]);
-        this.drawTurntable(0);
+        
+        // 延迟一点时间再绘制，确保Canvas完全准备好
+        setTimeout(() => {
+          this.drawTurntable(0);
+        }, 50);
+      } else {
+        console.error('Canvas初始化失败，获取到的元素信息:', res);
+        
+        // 重试机制，最多重试3次，使用更长的延迟
+        if (retryCount < 3) {
+          const delay = [500, 800, 25500][retryCount]; // 递增延迟
+          console.log(`Canvas初始化重试 ${retryCount + 1}/3，延迟${delay}ms`);
+          setTimeout(() => {
+            this.initCanvas(retryCount + 1);
+          }, delay);
+        } else {
+          console.error('Canvas初始化最终失败，使用默认配置');
+          // 使用默认配置作为兜底
+          this.canvasInfo = {
+            width: 350,
+            height: 350,
+            centerX: 175,
+            centerY: 175,
+            radius: 155
+          };
+          
+          // 释放初始化锁
+          this.isInitializingCanvas = false;
+          
+          setTimeout(() => {
+            this.drawTurntable(0);
+          }, 200);
+        }
       }
     });
   },
+
+
 
   // 动态更新按钮位置
   updateButtonPosition(containerRect) {
@@ -285,9 +404,27 @@ Page({
     if (!this.canvasInfo) return;
     
     const ctx = wx.createCanvasContext('turntable', this);
-    const len = sectors.length;
+    // 使用页面数据中的sectors，而不是全局变量
+    const currentSectors = this.data.sectors || [];
+    const len = currentSectors.length;
+
+    
+    // 添加对空sectors数组的保护
+    if (len === 0) {
+      console.log('sectors数组为空，跳过绘制');
+      ctx.draw();
+      return;
+    }
+    
     const angle = 2 * Math.PI / len;
     const { width, height, centerX, centerY, radius } = this.canvasInfo;
+    
+    // 添加对radius的保护，确保为正数
+    if (radius <= 0) {
+      console.error('Canvas radius为负值或零:', radius, '跳过绘制');
+      ctx.draw();
+      return;
+    }
 
     // 一次性设置通用属性
     ctx.setTextAlign('center');
@@ -305,7 +442,7 @@ Page({
       ctx.moveTo(centerX, centerY);
       ctx.arc(centerX, centerY, radius, startAngle, endAngle);
       ctx.closePath();
-      ctx.setFillStyle(sectors[i].color);
+      ctx.setFillStyle(currentSectors[i].color);
       ctx.fill();
       
       // 绘制边框
@@ -331,18 +468,30 @@ Page({
       }
     }
 
-    // 单独绘制所有文字，减少save/restore次数
-    ctx.setFillStyle('#ffffff');
+    // 单独绘制所有文字，根据高亮状态设置不同颜色
     for (let i = 0; i < len; i++) {
       const startAngle = angle * i + rotateAngle;
       const textAngle = startAngle + angle / 2;
       const textX = centerX + Math.cos(textAngle) * radius * 0.7;
       const textY = centerY + Math.sin(textAngle) * radius * 0.7;
       
+      // 根据是否有高亮索引和当前索引设置文字颜色
+      if (highlightIndex >= 0) {
+        // 有高亮索引时，选中区域用白色，非选中区域用深灰色
+        if (i === highlightIndex) {
+          ctx.setFillStyle('#ffffff'); // 选中区域保持白色
+        } else {
+          ctx.setFillStyle('#666666'); // 非选中区域使用深灰色，更明显
+        }
+      } else {
+        // 没有高亮时，所有文字都是白色
+        ctx.setFillStyle('#ffffff');
+      }
+      
       ctx.save();
       ctx.translate(textX, textY);
       ctx.rotate(textAngle);
-      ctx.fillText(sectors[i].text, 0, 0);
+      ctx.fillText(currentSectors[i].text, 0, 0);
       ctx.restore();
     }
     
@@ -360,14 +509,33 @@ Page({
       ctx.draw();
     } else {
       ctx.draw(false, () => {
-        // 绘制完成后，将Canvas转换为图片
-        this.convertCanvasToImage();
+        // 给Canvas一些时间完成实际渲染，然后转换为图片
+        setTimeout(() => {
+          this.convertCanvasToImage();
+        }, 100);
       });
     }
   },
   
   // 将Canvas转换为图片
   convertCanvasToImage() {
+    // 检查Canvas是否真正准备好
+    const query = wx.createSelectorQuery();
+    query.select('.turntable-canvas').boundingClientRect();
+    query.exec((res) => {
+      if (res[0] && res[0].width > 0 && res[0].height > 0) {
+        // Canvas尺寸正常，可以转换
+        this.performCanvasToImage();
+      } else {
+        console.log('Canvas尺寸异常，延迟转换:', res[0]);
+        // 延迟重试，最多重试3次
+        this.retryCanvasToImage(0);
+      }
+    });
+  },
+
+  // 执行Canvas到图片的转换
+  performCanvasToImage() {
     wx.canvasToTempFilePath({
       canvasId: 'turntable',
       success: (res) => {
@@ -375,6 +543,7 @@ Page({
           turntableImage: res.tempFilePath,
           canvasVisible: false // 隐藏Canvas，显示图片
         });
+        console.log('Canvas转图片成功');
       },
       fail: (err) => {
         console.error('Canvas转图片失败:', err);
@@ -386,10 +555,42 @@ Page({
       }
     }, this);
   },
+
+  // 重试Canvas转图片
+  retryCanvasToImage(retryCount) {
+    if (retryCount >= 3) {
+      console.log('Canvas转图片重试失败，保持显示Canvas');
+      this.setData({
+        canvasVisible: true,
+        turntableImage: ''
+      });
+      return;
+    }
+
+    const delay = [300, 600, 1000][retryCount];
+    console.log(`Canvas转图片重试 ${retryCount + 1}/3，延迟${delay}ms`);
+    
+    setTimeout(() => {
+      const query = wx.createSelectorQuery();
+      query.select('.turntable-canvas').boundingClientRect();
+      query.exec((res) => {
+        if (res[0] && res[0].width > 0 && res[0].height > 0) {
+          this.performCanvasToImage();
+        } else {
+          this.retryCanvasToImage(retryCount + 1);
+        }
+      });
+    }, delay);
+  },
   
   // 计算当前12点钟方向指向的扇区
   getCurrentPointingSector(currentAngle) {
-    const len = sectors.length;
+    // 使用页面数据中的sectors，而不是全局变量
+    const currentSectors = this.data.sectors || [];
+    const len = currentSectors.length;
+    
+    if (len === 0) return 0;
+    
     const anglePerSector = 360 / len;
     
     // 将角度标准化到0-360度
@@ -481,19 +682,32 @@ Page({
     this.drawTurntable(0);
     
     // 根据权重随机选择扇区
-    const len = sectors.length;
+    // 使用页面数据中的sectors，而不是全局变量
+    const currentSectors = this.data.sectors || [];
+    const len = currentSectors.length;
+    
+    // 添加对空sectors数组的保护
+    if (len === 0) {
+      console.log('sectors数组为空，无法开始转动');
+      this.setData({ 
+        rotating: false,
+        currentOption: '配置错误，请重新编辑' 
+      });
+      return;
+    }
+    
     // 优先使用realWeight，如果没有则使用weight，默认为1
     const getWeight = (sector) => {
       return sector.realWeight !== undefined ? sector.realWeight : (sector.weight || 1);
     };
     
-    const totalWeight = sectors.reduce((sum, sector) => sum + getWeight(sector), 0);
+    const totalWeight = currentSectors.reduce((sum, sector) => sum + getWeight(sector), 0);
     const randomValue = Math.random() * totalWeight;
     
     let currentWeight = 0;
     let target = 0;
     for (let i = 0; i < len; i++) {
-      currentWeight += getWeight(sectors[i]);
+      currentWeight += getWeight(currentSectors[i]);
       if (randomValue <= currentWeight) {
         target = i;
         break;
@@ -533,7 +747,7 @@ Page({
         if (this.lastPointingSector !== pointingSector) {
           this.lastPointingSector = pointingSector;
           this.setData({
-            currentOption: sectors[pointingSector].text
+            currentOption: currentSectors[pointingSector].text
           });
           
           // 当指向的选项发生变化时触发震动
@@ -562,7 +776,7 @@ Page({
           rotating: false,
           finished: true,
           selectedIndex: target,
-          currentOption: sectors[target].text
+          currentOption: currentSectors[target].text
         });
         
         // 只绘制一次最终的高亮效果

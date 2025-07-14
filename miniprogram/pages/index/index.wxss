@@ -107,10 +107,7 @@
   transform: scale(0.95);
 }
 
-/* Canvas隐藏时的样式 */
-.turntable-canvas.hidden {
-  display: none;
-}
+/* Canvas和图片样式保持一致 */
 
 /* 转盘图片样式 */
 .turntable-image {
@@ -118,6 +115,11 @@
   height: 350px;
   border-radius: 50%;
   box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.1);
+}
+
+/* Canvas隐藏时的样式 */
+.turntable-canvas.hidden {
+  display: none;
 }
 
 

@@ -1,3 +1,5 @@
+const StorageUtil = require('../../utils/storage');
+
 Page({
   data: {
     title: '转盘',
@@ -19,7 +21,7 @@ Page({
   // 加载转盘配置
   loadTurntableConfig() {
     try {
-      const config = wx.getStorageSync('turntableConfig');
+      const config = StorageUtil.getWithExpiry('turntableConfig');
       if (config) {
         this.setData({
           title: config.title || '转盘',
@@ -224,7 +226,7 @@ Page({
     };
 
     try {
-      wx.setStorageSync('turntableConfig', config);
+      StorageUtil.setWithExpiry('turntableConfig', config, 1); // 1天过期
       
       // 确保有 openid
       let openid = wx.getStorageSync('openid');
