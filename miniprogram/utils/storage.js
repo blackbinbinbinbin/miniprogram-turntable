@@ -12,7 +12,6 @@ const StorageUtil = {
     };
     
     wx.setStorageSync(key, dataWithExpiry);
-    console.log(`存储数据到${key}，${expiryInDays}天后过期`);
   },
 
   // 获取存储，自动检查过期
@@ -36,8 +35,7 @@ const StorageUtil = {
         wx.removeStorageSync(key);
         return null;
       }
-      
-      console.log(`${key}数据有效，剩余${Math.round((data.expiry - now) / (1000 * 60 * 60))}小时过期`);
+
       return data.value;
     } catch (e) {
       console.error(`读取${key}失败:`, e);
@@ -85,7 +83,6 @@ const StorageUtil = {
       
       data.expiry += additionalDays * 24 * 60 * 60 * 1000;
       wx.setStorageSync(key, data);
-      console.log(`${key}过期时间延长${additionalDays}天`);
       return true;
     } catch (e) {
       console.error(`延长${key}过期时间失败:`, e);
