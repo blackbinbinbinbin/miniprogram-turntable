@@ -1,8 +1,18 @@
 <view class="container">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <view class="back-btn" bindtap="handleBack">
+      <image class="back-icon" src="/images/icons/arrow.png" mode="aspectFit"></image>
+    </view>
+    <view class="page-title">用户管理</view>
+    <view class="header-right"></view>
+  </view>
+
   <!-- 头部搜索区域 -->
   <view class="search-section">
     <view class="search-box">
       <input type="text" 
+             class="search-input"
              placeholder="转盘名称/openid" 
              value="{{searchKeyword}}"
              bindinput="onSearchInput" />

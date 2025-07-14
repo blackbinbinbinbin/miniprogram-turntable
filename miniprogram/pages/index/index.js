@@ -19,9 +19,99 @@ Page({
   },
   canvasInfo: null, // 缓存 canvas 信息
   lastPointingSector: -1, // 缓存上次指向的扇区，减少重复更新
+  updateTimer: null, // 定时器ID
+
   onShow() {
     // 页面显示时加载配置
     this.loadTurntableConfig();
+    // 启动定时器
+    this.startUpdateTimer();
+  },
+
+  onHide() {
+    // 页面隐藏时清除定时器
+    this.clearUpdateTimer();
+  },
+
+  onUnload() {
+    // 页面卸载时清除定时器
+    this.clearUpdateTimer();
+  },
+
+  // 启动定时器
+  startUpdateTimer() {
+    // 先清除可能存在的定时器
+    this.clearUpdateTimer();
+    // 设置新的定时器，每30秒更新一次
+    this.updateTimer = setInterval(() => {
+      this.updateRealWeight();
+    }, 30000); // 30秒 = 30000毫秒
+  },
+
+  // 清除定时器
+  clearUpdateTimer() {
+    if (this.updateTimer) {
+      clearInterval(this.updateTimer);
+      this.updateTimer = null;
+    }
+  },
+
+  // 只更新realWeight数据
+  async updateRealWeight() {
+    const openid = wx.getStorageSync('openid');
+    if (!openid) return;
+
+    try {
+      const result = await wx.cloud.callFunction({
+        name: 'quickstartFunctions',
+        data: { 
+          type: 'selectSectorRecord',
+          data: {
+            _openid: openid
+          }
+        }
+      });
+
+      if (result.result && result.result.data && result.result.data.length > 0) {
+        const cloudConfig = result.result.data[0];
+        
+        // 根据text匹配更新realWeight
+        const updatedSectors = this.data.sectors.map(sector => {
+          // 在云端数据中找到对应text的扇区
+          const matchedSector = cloudConfig.sectors.find(
+            cloudSector => cloudSector.text === sector.text
+          );
+          
+          if (matchedSector && matchedSector.realWeight !== undefined) {
+            // 只更新realWeight，保持其他属性不变
+            return {
+              ...sector,
+              realWeight: matchedSector.realWeight
+            };
+          }
+          return sector;
+        });
+
+        // 更新全局sectors变量
+        sectors.length = 0;
+        sectors.push(...updatedSectors);
+        
+        // 更新页面数据
+        this.setData({
+          sectors: updatedSectors
+        });
+
+        // 同时更新本地存储
+        const localConfig = wx.getStorageSync('turntableConfig') || {};
+        wx.setStorageSync('turntableConfig', {
+          ...localConfig,
+          sectors: updatedSectors,
+          title: this.data.title // 保持原有标题
+        });
+      }
+    } catch (error) {
+      console.error('更新权重数据失败:', error);
+    }
   },
 
   onReady() {
@@ -452,9 +542,17 @@ Page({
       }
       
       if (progress < 1) {
-            // 使用requestAnimationFrame替代setTimeout，更流畅
-    animationId = setTimeout(animate, 16); // 约60fps
+        // 使用setTimeout模拟60fps的动画
+        animationId = setTimeout(() => {
+          animate();
+        }, 16); // 约60fps (1000ms/60 ≈ 16.7ms)
       } else {
+        // 清除动画定时器
+        if (animationId) {
+          clearTimeout(animationId);
+          animationId = null;
+        }
+        
         // 重置变量
         this.lastAngle = 0;
         this.lastPointingSector = -1;

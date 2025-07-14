@@ -38,7 +38,8 @@ Page({
         const turntableList = res.result.data.list.map(item => ({
           id: item._id,
           name: item.title,
-          creator: `${item.user_name || '未知用户'}(${item._openid})`
+          creator: item.user_name || '未知用户',
+          openid: item._openid
         }))
         this.setData({
           turntableList,
@@ -93,6 +94,34 @@ Page({
     console.log('输入变化：', field, value)
     this.setData({
       [field]: value
+    })
+  },
+
+  // 上一页
+  handlePrevPage() {
+    if (this.data.page > 1) {
+      this.setData({
+        page: this.data.page - 1
+      }, () => {
+        this.loadTurntableList()
+      })
+    }
+  },
+
+  // 下一页
+  handleNextPage() {
+    if (this.data.page < this.data.totalPages) {
+      this.setData({
+        page: this.data.page + 1
+      }, () => {
+        this.loadTurntableList()
+      })
+    }
+  },
+
+  handleBack() {
+    wx.navigateBack({
+      delta: 1
     })
   }
 }) 

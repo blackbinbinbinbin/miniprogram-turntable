@@ -103,14 +103,16 @@
   bottom: 0;
   background: rgba(255, 255, 255, 0.9);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  z-index: 999;
 }
 
 .loading-content {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 20rpx;
 }
 
 .loading-icon {
@@ -120,12 +122,82 @@
 }
 
 .loading-text {
-  margin-top: 20rpx;
   font-size: 28rpx;
   color: #666;
 }
 
 @keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 其他样式 */
+.container {
+  padding: 30rpx;
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: bold;
+  margin-bottom: 30rpx;
+  text-align: center;
+}
+
+.sectors-list {
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 20rpx;
+}
+
+.sector-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  border-bottom: 1px solid #eee;
+}
+
+.sector-item:last-child {
+  border-bottom: none;
+}
+
+.sector-name {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.weight-input {
+  width: 160rpx;
+  height: 60rpx;
+  background: #f5f5f5;
+  border-radius: 8rpx;
+  padding: 0 20rpx;
+  font-size: 28rpx;
+  text-align: center;
+}
+
+.btn-area {
+  margin-top: 60rpx;
+  padding: 0 40rpx;
+}
+
+.save-btn {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: #07C160;
+  color: #fff;
+  font-size: 32rpx;
+  border-radius: 44rpx;
+  text-align: center;
+}
+
+.save-btn[disabled] {
+  opacity: 0.6;
+  background: #07C160 !important;
+  color: #fff !important;
 } 

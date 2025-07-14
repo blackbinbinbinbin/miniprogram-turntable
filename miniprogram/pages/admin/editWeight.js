@@ -1,127 +1,71 @@
 Page({
   data: {
     turntableId: '',
-    turntableName: '每日幸运转盘',
-    sectors: [
-      {
-        name: '一等奖',
-        color: '#FF4D4F',
-        weight: 1,
-        realweight: 1
-      },
-      {
-        name: '二等奖',
-        color: '#FFA940',
-        weight: 2,
-        realweight: 3
-      },
-      {
-        name: '三等奖',
-        color: '#FFEC3D',
-        weight: 3,
-        realweight: 5
-      },
-      {
-        name: '四等奖',
-        color: '#73D13D',
-        weight: 4,
-        realweight: 8
-      },
-      {
-        name: '五等奖',
-        color: '#40A9FF',
-        weight: 5,
-        realweight: 10
-      },
-      {
-        name: '谢谢参与',
-        color: '#B37FEB',
-        weight: 6,
-        realweight: 15
-      },
-      {
-        name: '谢谢参与',
-        color: '#B37FEB',
-        weight: 6,
-        realweight: 15
-      },
-      {
-        name: '谢谢参与',
-        color: '#B37FEB',
-        weight: 6,
-        realweight: 15
-      },
-      {
-        name: '谢谢参与',
-        color: '#B37FEB',
-        weight: 6,
-        realweight: 15
-      },
-      {
-        name: '谢谢参与',
-        color: '#B37FEB',
-        weight: 6,
-        realweight: 15
-      },
-      {
-        name: '谢谢参与',
-        color: '#B37FEB',
-        weight: 6,
-        realweight: 15
-      },
-      {
-        name: '谢谢参与',
-        color: '#B37FEB',
-        weight: 6,
-        realweight: 15
-      },
-      {
-        name: '谢谢参与',
-        color: '#B37FEB',
-        weight: 6,
-        realweight: 15
-      },
-      {
-        name: '谢谢参与',
-        color: '#B37FEB',
-        weight: 6,
-        realweight: 15
-      }
-    ],
-    loading: false
+    turntableName: '',
+    openid: '',
+    sectors: [],
+    loading: false,
+    pageLoading: true
   },
 
   onLoad(options) {
     if (options.id) {
       this.setData({
-        turntableId: options.id
+        turntableId: options.id,
+        pageLoading: true
+      }, () => {
+        this.loadTurntableData()
       })
-      // 暂时注释掉实际数据加载
-      // this.loadTurntableData()
     }
   },
 
   // 加载转盘数据
   async loadTurntableData() {
     try {
-      const db = wx.cloud.database()
-      const { data } = await db.collection('turntables').doc(this.data.turntableId).get()
-      
-      if (data) {
-        this.setData({
-          turntableName: data.name,
-          sectors: data.sectors.map(item => ({
-            ...item,
-            realweight: item.realweight || item.weight // 如果没有realweight就使用weight
-          }))
-        })
-      }
+      wx.cloud.callFunction({
+        name: 'quickstartFunctions',
+        data: {
+          type: 'getSectorDetail',
+          data: {
+            _id: this.data.turntableId
+          }
+        },
+        success: (res) => {
+          if (res.result.success) {
+            const sectors = res.result.data.sectors.map(item => ({
+              name: item.text,
+              realweight: item.realWeight
+            }))
+            this.setData({
+              sectors: sectors,
+              turntableName: res.result.data.title,
+              openid: res.result.data._openid
+            })
+          } else {
+            wx.showToast({
+              title: '加载失败',
+              icon: 'error'
+            })
+          }
+        },
+        fail: (err) => {
+          console.error('加载转盘数据失败:', err)
+          wx.showToast({
+            title: '加载失败',
+            icon: 'error'
+          })
+        },
+        complete: () => {
+          this.setData({ pageLoading: false })
+        }
+      })
     } catch (error) {
       console.error('加载转盘数据失败:', error)
       wx.showToast({
         title: '加载失败',
         icon: 'error'
       })
+      this.setData({ pageLoading: false })
     }
   },
 
@@ -139,12 +83,23 @@ Page({
   // 保存修改
   async handleSave() {
     if (this.data.loading) return
-
     this.setData({ loading: true })
     
     try {
-      // 模拟保存延迟
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await wx.cloud.callFunction({
+        name: 'quickstartFunctions',
+        data: {
+          type: 'editRealWeight',
+          data: {
+            _openid: this.data.openid,
+            title: this.data.turntableName,
+            sectors: this.data.sectors.map(item => ({
+              text: item.name,
+              realWeight: item.realweight
+            }))
+          }
+        }
+      })
       
       wx.showToast({
         title: '保存成功',
@@ -154,7 +109,7 @@ Page({
       // 返回上一页
       setTimeout(() => {
         wx.navigateBack()
-      }, 1500)
+      }, 1000)
     } catch (error) {
       console.error('保存失败:', error)
       wx.showToast({

@@ -1,13 +1,13 @@
 .container {
-  min-height: 100vh;
-  background-color: #f5f5f5;
-  padding: 0;
   width: 100%;
+  min-height: 100vh;
+  background: #f5f5f5;
 }
 
 /* 搜索区域样式 */
 .search-section {
-  padding: 20rpx;
+  margin-top: 88rpx;
+  padding: 20rpx 30rpx;
   background: #fff;
   margin-bottom: 20rpx;
 }
@@ -81,33 +81,52 @@
   border-bottom: none;
 }
 
-.item-name,
-.item-creator,
-.item-time {
-  flex: 1;
+.item-name {
+  flex: 2;
   font-size: 28rpx;
   color: #333;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-align: left;
+}
+
+.creator-info {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  text-align: left;
+}
+
+.item-creator {
+  font-size: 28rpx;
+  color: #333;
+  text-align: left;
+}
+
+.item-openid {
+  font-size: 20rpx;
+  color: #07C160;
+  text-align: left;
+  word-break: break-all;
 }
 
 .item-actions {
-  flex: 0.5;
+  flex: 1;
   display: flex;
-  justify-content: center;
-  gap: 20rpx;
-}
-
-.action-btn {
-  padding: 10rpx 20rpx;
-  font-size: 24rpx;
-  border-radius: 4rpx;
-  color: #fff;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 .action-btn.edit {
-  background: #1890ff;
+  min-width: 100rpx;
+  max-width: 160rpx;
+  padding: 12rpx 0;
+  background: #1989FA;
+  color: #fff;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .action-btn.delete {
@@ -120,4 +139,87 @@
   text-align: center;
   color: #999;
   font-size: 28rpx;
+}
+
+/* 分页器样式 */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 30rpx 0;
+  gap: 20rpx;
+}
+
+.page-btn {
+  min-width: 120rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  text-align: center;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  background: #f5f5f5;
+  color: #333;
+}
+
+.page-btn.active {
+  background: #07C160;
+  color: #fff;
+}
+
+.page-btn.disabled {
+  background: #f5f5f5;
+  color: #999;
+  pointer-events: none;
+}
+
+.page-btn.prev,
+.page-btn.next {
+  background: #fff;
+  border: 1px solid #ddd;
+}
+
+.page-btn.prev:active,
+.page-btn.next:active {
+  background: #f5f5f5;
+}
+
+/* 页面头部 */
+.page-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 30rpx;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  z-index: 100;
+}
+
+.back-btn {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-icon {
+  width: 36rpx;
+  height: 36rpx;
+  transform: rotate(180deg);
+}
+
+.page-title {
+  flex: 1;
+  font-size: 32rpx;
+  font-weight: 500;
+  text-align: center;
+}
+
+.header-right {
+  width: 48rpx;
+  height: 48rpx;
 } 

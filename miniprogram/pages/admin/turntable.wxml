@@ -1,5 +1,14 @@
 <!-- 转盘管理页面 -->
 <view class="container">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <view class="back-btn" bindtap="handleBack">
+      <image class="back-icon" src="/images/icons/arrow.png" mode="aspectFit"></image>
+    </view>
+    <view class="page-title">转盘管理</view>
+    <view class="header-right"></view>
+  </view>
+
   <!-- 头部搜索区域 -->
   <view class="search-section">
     <view class="search-box">
@@ -33,13 +42,26 @@
       <block wx:for="{{turntableList}}" wx:key="id">
         <view class="list-item">
           <text class="item-name">{{item.name || '未命名转盘'}}</text>
-          <text class="item-creator">{{item.creator || '未知用户'}}</text>
+          <view class="creator-info">
+            <text class="item-creator">{{item.creator}}</text>
+            <text class="item-openid">{{item.openid}}</text>
+          </view>
           <view class="item-actions">
             <view class="action-btn edit" bindtap="handleEdit" data-id="{{item.id}}">编辑概率</view>
           </view>
         </view>
       </block>
     </view>
+  </view>
+
+  <!-- 分页器 -->
+  <view class="pagination" wx:if="{{total > 0}}">
+    <view class="page-btn prev {{page <= 1 ? 'disabled' : ''}}" 
+          bindtap="handlePrevPage"
+          wx:if="{{page > 1}}">上一页</view>
+    <view class="page-btn active">{{page}}</view>
+    <view class="page-btn next {{page >= totalPages ? 'disabled' : ''}}" 
+          bindtap="handleNextPage">下一页</view>
   </view>
 
   <!-- 无数据提示 -->

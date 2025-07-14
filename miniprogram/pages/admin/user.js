@@ -205,5 +205,11 @@ Page({
         icon: 'error'
       })
     }
-  }
+  },
+
+  handleBack() {
+    wx.navigateBack({
+      delta: 1
+    })
+  },
 }) 

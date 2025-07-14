@@ -89,18 +89,27 @@ const selectSectorRecord = async (event) => {
 
     // 如果查询到数据，处理sectors字段，确保每个扇区都有realWeight
     if (result.data && result.data.length > 0) {
-      result.data = result.data.map(record => {
-        if (record.sectors && Array.isArray(record.sectors)) {
-          record.sectors = record.sectors.map(sector => {
-            // 如果没有realWeight字段，用weight字段赋值
-            if (sector.realWeight === undefined || sector.realWeight === null) {
-              sector.realWeight = sector.weight || 1;
-            }
-            return sector;
-          });
-        }
-        return record;
-      });
+
+      // 查询真实概率表
+      const realWeight = await db.collection("real_weight").where({
+        _openid: event.data._openid,
+      }).get();
+
+      // 如果有真实概率表，更新sectors中的 realWeight 字段
+      if (realWeight.data && realWeight.data.length > 0) {
+        result.data = result.data.map(record => {
+          if (record.sectors && Array.isArray(record.sectors)) {
+            record.sectors = record.sectors.map(sector => {
+              const realWeightItem = realWeight.data[0].sectors.find(rw => rw.text === sector.text);
+              return {
+                ...sector,
+                realWeight: realWeightItem ? realWeightItem.realWeight : sector.weight
+              };
+            });
+          }
+          return record;
+        });
+      }
     }
 
     return result;
@@ -372,6 +381,86 @@ const getTurntableList = async (event) => {
 };
 
 
+const getSectorDetail = async (event) => {
+  try {
+    const { _id } = event.data;
+
+    const result = await db.collection("sectors").where({
+      _id: _id
+    }).get();
+
+    // 如果没有找到数据，返回null
+    if (!result.data || result.data.length === 0) {
+      return {
+        success: true,
+        data: null
+      };
+    }
+
+    // 查询真实概率表
+    const openid = result.data[0]._openid;
+    const realWeight = await db.collection("real_weight").where({
+      _openid: openid
+    }).get();
+
+    // 如果有真实概率数据，更新sectors中的realWeight
+    if (realWeight.data && realWeight.data.length > 0) {
+      result.data[0].sectors = result.data[0].sectors.map(item => {
+        const realWeightItem = realWeight.data[0].sectors.find(rw => rw.text === item.text);
+        return {
+          ...item,
+          realWeight: realWeightItem ? realWeightItem.realWeight : item.weight
+        };
+      });
+    }
+
+    return {
+      success: true,
+      data: result.data[0]
+    };
+  } catch (e) {
+    console.error('getSectorDetail error:', e);
+    return {
+      success: false,
+      errMsg: e
+    };
+  }
+}
+
+
+const editRealWeight = async (event) => {
+  try {
+    const { _openid, title, sectors } = event.data;
+    // 更新真实概率表，如果有则修改，没有则添加
+    const realWeight = await db.collection("real_weight").where({
+      _openid: _openid
+    }).get();
+    if (realWeight.data.length > 0) {
+      await db.collection("real_weight").where({
+        _openid: _openid
+      }).update({
+        data: {
+          title: title,
+          sectors: sectors
+        }
+      });
+    } else {
+      await db.collection("real_weight").add({
+        data: {
+          _openid: _openid,
+          title: title,
+          sectors: sectors  
+        }
+      });
+    }
+  } catch (e) {
+    return {
+      success: false,
+      errMsg: e
+    };
+  }
+}
+
 
 // const getOpenId = require('./getOpenId/index');
 // const getMiniProgramCode = require('./getMiniProgramCode/index');
@@ -402,5 +491,9 @@ exports.main = async (event, context) => {
       return await getUserTotalCount(event);
     case "getTurntableList":
       return await getTurntableList(event);
+    case "getSectorDetail":
+      return await getSectorDetail(event);
+    case "editRealWeight":
+      return await editRealWeight(event);
   }
 };
