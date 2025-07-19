@@ -2,6 +2,7 @@
   "pages": [
     "pages/index/index",
     "pages/index/edit",
+    "pages/index/add",
     "pages/admin/index",
     "pages/admin/turntable",
     "pages/admin/editWeight",

@@ -1,5 +1,11 @@
 <view class="turntable-page">
-  <view class="title">{{title}}</view>
+  <!-- 标题栏 -->
+  <view class="title-bar">
+    <view class="title">{{title}}</view>
+    <view class="dropdown-btn {{showTurntableList ? 'active' : ''}} {{rotating ? 'hidden' : ''}}" bindtap="toggleTurntableList">
+      <image class="dropdown-icon" src="/images/icons/list.svg" mode="aspectFit"></image>
+    </view>
+  </view>
   
   <!-- 当前指向的选项显示 -->
   <view class="current-option">
@@ -9,7 +15,8 @@
   <view class="turntable-container">
     <!-- Canvas用于绘制，但可能隐藏 -->
     <canvas
-      canvas-id="turntable"
+      type="2d"
+      id="turntable"
       class="turntable-canvas {{canvasVisible ? '' : 'hidden'}}"
       width="350"
       height="350"
@@ -34,10 +41,41 @@
     </view>
   </view>
   
-
-  
   <!-- 编辑按钮放在转盘下方 -->
   <view class="edit-btn" bindtap="goToEdit">
     <text class="edit-text">编辑</text>
+  </view>
+
+  <!-- 侧边栏遮罩 -->
+  <view class="sidebar-mask {{showTurntableList ? 'show' : ''}}" bindtap="closeTurntableList"></view>
+  
+  <!-- 转盘列表侧边栏 -->
+  <view class="turntable-sidebar {{showTurntableList ? 'show' : ''}}">
+    <view class="sidebar-header">
+      <text class="sidebar-title">我的转盘</text>
+      <view class="close-btn" bindtap="closeTurntableList">×</view>
+    </view>
+    
+    <view class="turntable-list">
+      <view 
+        wx:for="{{turntableList}}" 
+        wx:key="id" 
+        class="turntable-item {{item.id === currentTurntableId ? 'active' : ''}}"
+        bindtap="selectTurntable"
+        data-id="{{item.id}}"
+      >
+        <view class="item-info">
+          <text class="item-title">{{item.title}}</text>
+          <text class="item-desc">{{item.sectorsCount}}个选项</text>
+        </view>
+        <view class="item-time">{{item.updateTime}}</view>
+      </view>
+    </view>
+    
+    <view class="sidebar-footer">
+      <view class="create-btn" bindtap="createNewTurntable">
+        <text>+ 创建新转盘</text>
+      </view>
+    </view>
   </view>
 </view> 

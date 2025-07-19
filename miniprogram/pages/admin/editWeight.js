@@ -34,13 +34,16 @@ Page({
           if (res.result.success) {
             const sectors = res.result.data.sectors.map(item => ({
               name: item.text,
-              realweight: item.realWeight
+              realweight: item.realWeight,
+              probability: '0.0%' // 初始化概率字段
             }))
             this.setData({
               sectors: sectors,
               turntableName: res.result.data.title,
               openid: res.result.data._openid
             })
+            // 计算概率
+            this.calculateProbabilities()
           } else {
             wx.showToast({
               title: '加载失败',
@@ -78,6 +81,29 @@ Page({
     sectors[index].realweight = value
     
     this.setData({ sectors })
+    // 重新计算概率
+    this.calculateProbabilities()
+  },
+
+  // 计算概率
+  calculateProbabilities() {
+    const sectors = this.data.sectors
+    // 计算总权重
+    const totalWeight = sectors.reduce((sum, sector) => sum + (sector.realweight || 0), 0)
+    
+    // 计算每个选项的概率
+    const updatedSectors = sectors.map(sector => {
+      const weight = sector.realweight || 0
+      const probability = totalWeight > 0 ? ((weight / totalWeight) * 100).toFixed(1) : '0.0'
+      return {
+        ...sector,
+        probability: probability + '%'
+      }
+    })
+    
+    this.setData({
+      sectors: updatedSectors
+    })
   },
 
   // 保存修改

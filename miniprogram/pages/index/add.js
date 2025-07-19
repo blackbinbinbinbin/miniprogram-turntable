@@ -2,100 +2,19 @@ const StorageUtil = require('../../utils/storage');
 
 Page({
   data: {
-    title: '转盘',
-    turntableId: '', // 添加turntableId字段
+    title: '新建转盘',
     sectors: [
-      { text: '唱', color: '#ff8a80', weight: 1 },
-      { text: '跳', color: '#ffeb3b', weight: 1 },
-      { text: 'rap', color: '#81c784', weight: 1 },
-      { text: '篮球', color: '#64b5f6', weight: 1 },
-      { text: '再转一次', color: '#ba68c8', weight: 1 }
+      { text: '选项1', color: '#ff8a80', weight: 1 },
+      { text: '选项2', color: '#ffeb3b', weight: 1 },
+      { text: '选项3', color: '#81c784', weight: 1 },
+      { text: '选项4', color: '#64b5f6', weight: 1 },
+      { text: '选项5', color: '#ba68c8', weight: 1 }
     ],
     loading: false // 加载状态
   },
 
-  async onLoad(options) {
-    // 获取传入的turntableId参数
-    const turntableId = options.turntableId || '';
-    
-    // 保存到data中
-    this.setData({
-      turntableId: turntableId
-    });
-    
-    console.log('编辑页面接收到的turntableId:', turntableId);
-    
-    // 从存储中读取转盘配置
-    await this.loadTurntableConfig();
-  },
-
-  // 加载转盘配置
-  async loadTurntableConfig() {
-    try {
-      // 如果有turntableId，从云端加载对应的转盘数据
-      if (this.data.turntableId && this.data.turntableId.trim() !== '') {
-        console.log('编辑模式：从云端加载转盘数据, ID:', this.data.turntableId);
-        await this.loadTurntableFromCloud(this.data.turntableId);
-      } else {
-        // 新建模式：从本地存储读取默认配置
-        console.log('新建模式：从本地存储加载默认配置');
-        const config = StorageUtil.getWithExpiry('turntableConfig');
-        if (config) {
-          this.setData({
-            title: config.title || '转盘',
-            sectors: config.sectors || this.data.sectors
-          });
-        }
-      }
-    } catch (e) {
-      console.log('读取配置失败', e);
-    }
-  },
-
-  // 从云端加载指定转盘的数据
-  async loadTurntableFromCloud(turntableId) {
-    try {
-      const openid = wx.getStorageSync('openid');
-      if (!openid) {
-        console.log('无openid，无法从云端加载');
-        return;
-      }
-
-      const result = await wx.cloud.callFunction({
-        name: 'quickstartFunctions',
-        data: { 
-          type: 'getAllTurntable',
-          data: {
-            openid: openid
-          }
-        }
-      });
-
-      if (result.result && result.result.success && result.result.data) {
-        // 找到对应的转盘数据
-        const targetTurntable = result.result.data.find(item => item._id === turntableId);
-        
-        if (targetTurntable) {
-          console.log('找到目标转盘数据:', targetTurntable);
-          this.setData({
-            title: targetTurntable.title || '转盘',
-            sectors: targetTurntable.sectors || this.data.sectors
-          });
-        } else {
-          console.log('警告：未找到对应转盘数据，但保持编辑模式');
-          // 不清空turntableId，保持编辑模式，使用默认数据
-          wx.showToast({
-            title: '转盘数据加载异常',
-            icon: 'none',
-            duration: 2000
-          });
-        }
-      } else {
-        console.log('云端数据加载失败，使用默认配置');
-      }
-    } catch (error) {
-      console.error('从云端加载转盘数据失败:', error);
-    }
+  onLoad() {
+    console.log('创建新转盘页面加载');
   },
 
   // 修改标题
@@ -210,7 +129,7 @@ Page({
     });
   },
 
-  // 在需要使用 openid 之前先获取并存储
+  // 获取并存储openid
   async getAndStoreOpenId() {
     try {
       const res = await wx.cloud.callFunction({
@@ -226,7 +145,7 @@ Page({
       return null;
     }
   },
-  
+
   // 检查是否符合进入admin页面的条件
   checkAdminAccess() {
     const currentSectors = this.data.sectors;
@@ -265,9 +184,9 @@ Page({
     
     console.log('检测到admin访问条件满足');
     return true;
-  }, 
+  },
 
-  // 保存配置
+  // 保存配置 - 专门用于创建新转盘
   async saveConfig() {
     if (this.data.sectors.length < 2) {
       wx.showToast({
@@ -329,101 +248,54 @@ Page({
       // 确保有 openid
       let openid = wx.getStorageSync('openid');
       if (!openid) {
-        openid = await this.getAndStoreOpenId();  // 使用 await
+        openid = await this.getAndStoreOpenId();
         if (!openid) {
           wx.showToast({ title: '获取用户信息失败', icon: 'none' });
+          this.setData({ loading: false });
           return;
         }
       }
       
-      // 判断是新增还是修改转盘
-      console.log('保存时的turntableId:', this.data.turntableId);
-      console.log('turntableId类型:', typeof this.data.turntableId);
-      console.log('判断结果:', this.data.turntableId && this.data.turntableId.trim() !== '');
+      // 新建转盘 - 直接调用insertSectorsRecord
+      console.log('创建新转盘 - 调用insertSectorsRecord');
       
-      if (this.data.turntableId && this.data.turntableId.trim() !== '') {
-        console.log('执行编辑模式 - 调用updateSectorsRecord');
-        // 编辑现有转盘 - 先获取原有数据保留realWeight
-        const res = await wx.cloud.callFunction({
-          name: 'quickstartFunctions',
-          data: {
-            type: 'selectSectorRecord',
-            data: {
-              _openid: openid
-            }
-          }
-        });
-        
-        const existingRecords = res?.result?.data || [];
-        if (existingRecords.length > 0) {
-          // 从现有数据中保留realWeight
-          const sectors = existingRecords[0].sectors;
-          config.sectors.forEach(configSector => {
-            const matchingSector = sectors.find(sector => sector.text === configSector.text);
-            if (matchingSector) {
-              configSector.realWeight = matchingSector.realWeight || matchingSector.weight || 1;
-            } else {
-              // 新添加的扇区，设置默认realWeight
-              configSector.realWeight = configSector.weight || 1;
-            }
-          });
-        }
-        
-        // 更新现有转盘
-        await wx.cloud.callFunction({
-          name: 'quickstartFunctions',
-          data: {
-            type: 'updateSectorsRecord',
-            data: {
-              _openid: openid,
-              sectors: config.sectors,
-              title: config.title,
-              id: this.data.turntableId
-            }
-          }
-        });
-      } else {
-        console.log('执行新建模式 - 调用insertSectorsRecord');
-        // 新建转盘
-        // 为新转盘的每个扇区设置默认realWeight
-        config.sectors.forEach(sector => {
-          sector.realWeight = sector.weight || 1;
-        });
-        
-        const createResult = await wx.cloud.callFunction({
-          name: 'quickstartFunctions',
-          data: {
-            type: 'insertSectorsRecord',
-            data: {
-              _openid: openid,
-              title: config.title,
-              sectors: config.sectors
-            }
-          }
-        });
-        
-        // 获取新创建的转盘ID并更新到页面数据
-        if (createResult.result && createResult.result.success && createResult.result.data._id) {
-          const newTurntableId = createResult.result.data._id;
-          this.setData({
-            turntableId: newTurntableId
-          });
-          console.log('新转盘创建成功，ID:', newTurntableId);
-        }
-      }
+      // 为新转盘的每个扇区设置默认realWeight
+      config.sectors.forEach(sector => {
+        sector.realWeight = sector.weight || 1;
+      });
       
+      const createResult = await wx.cloud.callFunction({
+        name: 'quickstartFunctions',
+        data: {
+          type: 'insertSectorsRecord',
+          data: {
+            _openid: openid,
+            title: config.title,
+            sectors: config.sectors
+          }
+        }
+      });
+      
+      console.log('新转盘创建结果:', createResult);
       
       // 隐藏loading
       this.setData({ loading: false });
       
-      wx.showToast({
-        title: '保存成功',
-        icon: 'success'
-      });
-      
-      setTimeout(() => {
-        wx.navigateBack();
-      }, 1500);
+      if (createResult.result && createResult.result.success) {
+        wx.showToast({
+          title: '转盘创建成功',
+          icon: 'success'
+        });
+        
+        setTimeout(() => {
+          wx.navigateBack();
+        }, 1500);
+      } else {
+        wx.showToast({
+          title: '创建失败，请重试',
+          icon: 'none'
+        });
+      }
       
     } catch (e) {
       console.error('保存失败:', e);

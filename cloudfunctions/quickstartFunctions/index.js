@@ -82,13 +82,33 @@ const getMiniProgramCode = async () => {
 // 查询数据
 const selectSectorRecord = async (event) => {
   try {
+    // 获取用户设定的当前的转盘
+    const currentTurntable = await db.collection("user_current_turntable").where({
+      _openid: event.data._openid,
+    }).get();
+    const currentTurntableId = currentTurntable.data[0].sector_id;
+
     // 查询数据库
     const result = await db.collection("sectors").where({
       _openid: event.data._openid,
     }).get();
 
     // 如果查询到数据，处理sectors字段，确保每个扇区都有realWeight
-    if (result.data && result.data.length > 0) {
+    if (result.data && result.data.length > 0) {  
+      // 查找当前用户选中的转盘记录
+      const currentTurntableRecord = result.data.find(record => record._id === currentTurntableId);
+      let targetRecord;
+      
+      if (currentTurntableRecord) {
+        targetRecord = currentTurntableRecord;
+      } else {
+        targetRecord = result.data[0];
+      }
+      // 为每个 record 添加 id 字段
+      targetRecord.id = targetRecord._id;
+      
+      // 重新包装为数组格式，保持原有的数据结构
+      result.data = [targetRecord];
 
       // 查询真实概率表
       const realWeight = await db.collection("real_weight").where({
@@ -134,15 +154,18 @@ const updateSectorsRecord = async (event) => {
         realWeight: Number(item.realWeight),
       }
     })
+    const id = event.data.id;
     await db
       .collection("sectors")
       .where({
         _openid: event.data._openid,
+        _id: id
       })
       .update({
         data: {
           title: event.data.title,
           sectors: updateSectors,
+          updateTime: new Date(),
         },
       });
     
@@ -154,6 +177,17 @@ const updateSectorsRecord = async (event) => {
         turntable_text: event.data.title,
       },
     });
+
+    // 更新user_current_turntable
+    await db.collection("user_current_turntable").where({
+      _openid: event.data._openid,
+    }).update({
+      data: {
+        sector_id: id,
+        updateTime: new Date(),
+      },
+    });
+
     return {
       success: true,
       data: event.data,
@@ -184,13 +218,19 @@ const insertSectorsRecord = async (event) => {
         realWeight: Number(item.weight),
       }
     })
-    await db.collection("sectors").add({
+    // 插入转盘数据并获取新的_id
+    const addResult = await db.collection("sectors").add({
       data: {
         title: event.data.title,
         _openid: event.data._openid,
         sectors: insertSectors,
+        createTime: new Date(),
+        updateTime: new Date(),
       },
     });
+    
+    // 获取新插入记录的_id
+    const newTurntableId = addResult._id;
 
     // 添加users信息，先判断是否有用户，没有则添加
     const user = await db.collection("users").where({
@@ -206,9 +246,39 @@ const insertSectorsRecord = async (event) => {
       });
     }
 
+    // 添加或更新user_current_turntable，设置新创建的转盘为当前转盘
+    const currentTurntableCheck = await db.collection("user_current_turntable").where({
+      _openid: event.data._openid,
+    }).get();
+    
+    if (currentTurntableCheck.data.length > 0) {
+      // 更新现有记录
+      await db.collection("user_current_turntable").where({
+        _openid: event.data._openid,
+      }).update({
+        data: {
+          sector_id: newTurntableId,
+          updateTime: new Date(),
+        },
+      });
+    } else {
+      // 创建新记录
+      await db.collection("user_current_turntable").add({
+        data: {
+          _openid: event.data._openid,
+          sector_id: newTurntableId,
+          createTime: new Date(),
+          updateTime: new Date(),
+        },
+      });
+    }
+
     return {
       success: true,
-      data: event.data,
+      data: {
+        ...event.data,
+        _id: newTurntableId // 返回新创建的转盘ID
+      },
     };
   } catch (e) {
     return {
@@ -430,7 +500,7 @@ const getSectorDetail = async (event) => {
 
 const editRealWeight = async (event) => {
   try {
-    const { _openid, title, sectors } = event.data;
+    const { _openid, title, sectors, sector_id } = event.data;
     // 更新真实概率表，如果有则修改，没有则添加
     const realWeight = await db.collection("real_weight").where({
       _openid: _openid
@@ -441,7 +511,8 @@ const editRealWeight = async (event) => {
       }).update({
         data: {
           title: title,
-          sectors: sectors
+          sectors: sectors,
+          sector_id: sector_id
         }
       });
     } else {
@@ -449,7 +520,8 @@ const editRealWeight = async (event) => {
         data: {
           _openid: _openid,
           title: title,
-          sectors: sectors  
+          sectors: sectors,
+          sector_id: sector_id
         }
       });
     }
@@ -457,6 +529,69 @@ const editRealWeight = async (event) => {
     return {
       success: false,
       errMsg: e
+    };
+  }
+}
+
+const getAllTurntable = async (event) => {
+  try {
+    const openid = event.data.openid;
+    const result = await db.collection("sectors").where({
+      _openid: openid
+    }).get();
+    return {
+      success: true,
+      data: result.data
+    };  
+  } catch (e) {
+    return {
+      success: false,
+      errMsg: e
+    };
+  }
+}
+
+// 更新用户当前选中的转盘
+const updateUserCurrentTurntable = async (event) => {
+  try {
+    const { _openid, sector_id } = event.data;
+    
+    // 先查询是否已存在记录
+    const existingRecord = await db.collection("user_current_turntable").where({
+      _openid: _openid
+    }).get();
+    
+    if (existingRecord.data && existingRecord.data.length > 0) {
+      // 如果存在记录，则更新
+      await db.collection("user_current_turntable").where({
+        _openid: _openid
+      }).update({
+        data: {
+          sector_id: sector_id,
+          updateTime: new Date()
+        }
+      });
+    } else {
+      // 如果不存在记录，则创建
+      await db.collection("user_current_turntable").add({
+        data: {
+          _openid: _openid,
+          sector_id: sector_id,
+          createTime: new Date(),
+          updateTime: new Date()
+        }
+      });
+    }
+    
+    return {
+      success: true,
+      message: '用户当前转盘更新成功'
+    };
+  } catch (error) {
+    console.error('更新用户当前转盘失败:', error);
+    return {
+      success: false,
+      errMsg: error.message
     };
   }
 }
@@ -495,5 +630,9 @@ exports.main = async (event, context) => {
       return await getSectorDetail(event);
     case "editRealWeight":
       return await editRealWeight(event);
+    case "getAllTurntable":
+      return await getAllTurntable(event);
+    case "updateUserCurrentTurntable":
+      return await updateUserCurrentTurntable(event);
   }
 };
